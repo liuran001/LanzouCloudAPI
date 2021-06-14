@@ -1,7 +1,5 @@
 import re
 import os
-import json
-from datetime import datetime
 from enum import Enum
 from urllib.parse import urlencode, quote_plus, unquote
 
@@ -9,8 +7,8 @@ import requests
 from flask import Flask, request, redirect, jsonify, abort, make_response
 
 app = Flask(__name__)
-app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
 app.config['JSON_AS_ASCII'] = False
+app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
 
 port = int(os.getenv('PORT', '3000'))
 ORIGIN = 'http://pan.lanzou.com'
@@ -83,8 +81,7 @@ def get_url(fid, client: Client, pwd=None):
     if client == Client.MOBILE and not pwd:
         response = get(params, client)
     else:
-        result = post_data(f'{ORIGIN}/ajaxm.php', params, client)
-        result = result.json()
+        result = post_data(f'{ORIGIN}/ajaxm.php', params, client).json()
         fake_url = f"{result['dom']}/file/{result['url']}"
         response = get(fake_url, client)
 

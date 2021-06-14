@@ -6,7 +6,7 @@ Wants=network-online.target
 [Service]
 Type=simple
 PIDFile=/var/run/lanzous.pid
-ExecStart=/usr/local/share/logi/LanzouCloudAPI/.venv/bin/python /usr/local/share/logi/LanzouCloudAPI/index.py
+ExecStart=/usr/local/share/LanzouCloudAPI/.venv/bin/python /usr/local/share/LanzouCloudAPI/index.py
 Restart=always
 
 [Install]

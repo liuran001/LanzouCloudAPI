@@ -1,13 +1,18 @@
 # LanzouCloudAPI
 
-## Install Requirements
+## Develop
+
+### Install Requirements
+
+<!-- https://blog.csdn.net/COCO56/article/details/105959190 -->
 
 ```bash
-pip3.9 install -r requirements.txt
-python3.9 index.py
+git clone --depth 1 https://github.com/vcheckzen/LanzouCloudAPI.git
+pip3.5+ install -r requirements.txt
+python3.5+ index.py
 ```
 
-## Request API
+### Request APIs
 
 ```bash
 ➜  curl localhost:3000
@@ -40,7 +45,16 @@ Server: Werkzeug/1.0.1 Python/3.9.2
 Date: Fri, 02 Apr 2021 21:17:25 GMT
 ```
 
-## Reverse Proxy
+## Deploy
+
+### Initialize the Service
+
+```bash
+# install python3.5+ manually before executing the following command
+bash <(curl -sL https://github.com/vcheckzen/LanzouCloudAPI/raw/master/setup.sh)
+```
+
+### Set Reverse Proxy
 
 ```nginx
 location /lanzous/ {
