@@ -2,12 +2,13 @@
 
 ## Develop
 
-### Install Requirements
+### Start a Server
 
 <!-- https://blog.csdn.net/COCO56/article/details/105959190 -->
 
 ```bash
 git clone --depth 1 https://github.com/vcheckzen/LanzouCloudAPI.git
+cd LanzouCloudAPI
 pip3.5+ install -r requirements.txt
 python3.5+ index.py
 ```
