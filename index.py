@@ -66,7 +66,15 @@ def get_params(fid, client: Client, pwd=None):
             data = eval(find_first(r"[^/]{2,}data : ({.+})", text))
             params = urlencode(data, quote_via=quote_plus)
     else:
-        text = get(f'{ORIGIN}/tp/{fid}', client).text
+        def get_text(fid):
+            return get(f'{ORIGIN}/tp/{fid}', client).text
+
+        text = get_text(fid)
+        if not text:
+            text = get(f'{ORIGIN}/{fid}', client).text
+            fid = find_first(r"[^/]{2,}.+ = 'tp/(.+)'", text)
+            text = get_text(fid)
+
         if pwd:
             params = eval(find_first(r"[^/]{2,}data : ({.+})", text))
         else:
@@ -97,7 +105,7 @@ def fmt_size(num, suffix='B'):
 
 
 def get_full_info(url):
-    headers = get(url, Client.PC).headers
+    headers = requests.head(url, allow_redirects=False).headers
     return {
         'name': unquote(headers.get('Content-Disposition').split('filename= ')[-1]),
         'size': fmt_size(int(headers.get('Content-Length'))),
@@ -116,7 +124,7 @@ def gen_json_response(code, msg, extra={}):
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 def catch_all(path):
-    if not re.match('.+\?.*url=.*lanzou.*\.com%2F[\w]{7,}.*', request.url):
+    if not re.match('.+\?.*url=.*lanzou.*\.com%2F[\w]{4,}.*', request.url):
         return gen_json_response(
             -1,
             'invalid link',
@@ -158,6 +166,7 @@ def server_error(error):
     return gen_json_response(
         -2,
         'link not match pwd, or lanzous has changed their webpage',
+        {'detail': error}
     )
 
 
@@ -180,6 +189,8 @@ if __name__ == '__main__':
     test('i4wk2oh',  Client.PC)
     test('iRujgdfrkza', Client.MOBILE)
     test('iRujgdfrkza', Client.PC)
+    test('dkbdv7', Client.MOBILE)
+    test('dkbdv7', Client.PC)
     print('--------------------------------------')
 
     app.run(host='127.0.0.1', port=port)

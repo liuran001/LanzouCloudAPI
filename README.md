@@ -55,7 +55,7 @@ Date: Fri, 02 Apr 2021 21:17:25 GMT
 bash <(curl -sL https://github.com/vcheckzen/LanzouCloudAPI/raw/master/setup.sh)
 ```
 
-### Set Reverse Proxy
+### Set up Reverse Proxy
 
 ```nginx
 location /lanzous/ {
