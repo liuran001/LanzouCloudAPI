@@ -20,6 +20,7 @@ curl -LO "https://github.com/vcheckzen/$REPO/archive/master.tar.gz"
 rm -rf "$REPO"
 mkdir "$REPO"
 tar xf master.tar.gz -C "$REPO" --strip-components 1
+rm -f master.tar.gz
 
 cd "$REPO"
 poetry config virtualenvs.in-project true
