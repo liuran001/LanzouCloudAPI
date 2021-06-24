@@ -21,6 +21,7 @@ install() {
     rm -f master.tar.gz
     curl -LO "https://github.com/vcheckzen/$REPO/archive/master.tar.gz"
 
+    systemctl stop lanzous 2>/dev/null
     rm -rf "$REPO"
     mkdir "$REPO"
     tar xf master.tar.gz -C "$REPO" --strip-components 1
@@ -35,8 +36,6 @@ install() {
     } || {
         echo "$IP $DOMAIN" >>/etc/hosts
     }
-
-    systemctl stop lanzous 2>/dev/null
 
     cp lanzous.service /etc/systemd/system/
     systemctl daemon-reload
