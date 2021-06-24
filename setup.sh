@@ -3,6 +3,7 @@
 for rq in curl tar grep sed systemctl; do
     [ "$(command -v $rq)" ] || {
         echo "Lack of $rq, quit installation"
+        exit
     }
 done
 
