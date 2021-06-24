@@ -138,6 +138,7 @@ def catch_all(path):
     data_type = request.args.get('type')
     fid = url.split('/')[-1]
 
+    errors = []
     for client in [Client.MOBILE, Client.PC]:
         try:
             url = get_url(fid, client, pwd)
@@ -152,10 +153,11 @@ def catch_all(path):
                     'success',
                     {'data': get_full_info(url)}
                 )
-        except Exception:
+        except Exception as e:
+            errors.append(e)
             pass
 
-    abort(500)
+    abort(500, errors)
 
 
 @app.errorhandler(500)
@@ -163,7 +165,7 @@ def server_error(error):
     return gen_json_response(
         -2,
         'link not match pwd, or lanzous has changed their webpage',
-        {'detail': error}
+        {'detail': str(error)}
     )
 
 
