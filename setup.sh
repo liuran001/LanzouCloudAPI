@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-for rq in curl tar grep sed systemctl; do
+for rq in curl tar grep sed systemctl python3; do
     [ "$(command -v $rq)" ] || {
         echo "Lack of $rq, quit installation"
         exit
