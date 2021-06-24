@@ -14,6 +14,7 @@ IP=47.91.203.9
 curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python3 -
 
 cd /usr/local/share
+rm -f master.tar.gz
 curl -LO "https://github.com/vcheckzen/$REPO/archive/master.tar.gz"
 
 rm -rf "$REPO"
