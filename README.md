@@ -61,8 +61,8 @@ bash <(curl -sL https://github.com/vcheckzen/LanzouCloudAPI/raw/master/setup.sh)
 ### Set up Reverse Proxy
 
 ```nginx
-location /lanzous/ {
-    proxy_pass http://localhost:3000/;
+location /lanzous {
+    proxy_pass http://localhost:3000;
     proxy_redirect off;
     proxy_set_header Host $http_host;
 }

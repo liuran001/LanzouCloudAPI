@@ -127,8 +127,8 @@ def catch_all(path):
             'invalid link',
             {
                 'examples': [
-                    f'{request.host_url}?url={ORIGIN}/i4wk2oh&type=down',
-                    f'{request.host_url}?url={ORIGIN}/i7tit9c&pwd=6svq&type=json',
+                    f'{request.base_url}?url={ORIGIN}/i4wk2oh&type=down',
+                    f'{request.base_url}?url={ORIGIN}/i7tit9c&pwd=6svq&type=json',
                 ]
             }
         )
