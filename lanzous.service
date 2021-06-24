@@ -1,5 +1,5 @@
 [Unit]
-Description=lanzous
+Description=Lanzous Service
 After=network-online.target
 Wants=network-online.target
 
