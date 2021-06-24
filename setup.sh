@@ -7,33 +7,51 @@ for rq in curl tar grep sed systemctl python3; do
     }
 done
 
-REPO=LanzouCloudAPI
-DOMAIN=pan.lanzou.com
 IP=47.91.203.9
+DOMAIN=pan.lanzou.com
+REPO=LanzouCloudAPI
+SAVE_PATH=/usr/local/share
+POETRY_INSTALATION_SCRIPT=https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py
 
-curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python3 -
+install() {
+    curl -sSL "$POETRY_INSTALATION_SCRIPT" | python3 -
+    source $HOME/.poetry/env
 
-cd /usr/local/share
-rm -f master.tar.gz
-curl -LO "https://github.com/vcheckzen/$REPO/archive/master.tar.gz"
+    cd "$SAVE_PATH"
+    rm -f master.tar.gz
+    curl -LO "https://github.com/vcheckzen/$REPO/archive/master.tar.gz"
 
-rm -rf "$REPO"
-mkdir "$REPO"
-tar xf master.tar.gz -C "$REPO" --strip-components 1
-rm -f master.tar.gz
+    rm -rf "$REPO"
+    mkdir "$REPO"
+    tar xf master.tar.gz -C "$REPO" --strip-components 1
+    rm -f master.tar.gz
 
-cd "$REPO"
-poetry config virtualenvs.in-project true
-poetry install
+    cd "$REPO"
+    poetry config virtualenvs.in-project true
+    poetry install
 
-grep "$DOMAIN" /etc/hosts &>/dev/null && {
-    sed -i "s/.*$DOMAIN/$IP $DOMAIN/" /etc/hosts
-} || {
-    echo "$IP $DOMAIN" >>/etc/hosts
+    grep "$DOMAIN" /etc/hosts &>/dev/null && {
+        sed -i "s/.*$DOMAIN/$IP $DOMAIN/" /etc/hosts
+    } || {
+        echo "$IP $DOMAIN" >>/etc/hosts
+    }
+
+    systemctl stop lanzous 2>/dev/null
+
+    cp lanzous.service /etc/systemd/system/
+    systemctl daemon-reload
+    systemctl enable --now lanzous
 }
 
-systemctl stop lanzous 2>/dev/null
+uninstall() {
+    curl -sSL "$POETRY_INSTALATION_SCRIPT" | python3 - --uninstall
 
-cp lanzous.service /etc/systemd/system/
-systemctl daemon-reload
-systemctl enable --now lanzous
+    rm -rf "$SAVE_PATH/$REPO"
+
+    sed -i "s/.*$DOMAIN//" /etc/hosts
+
+    systemctl disable --now lanzous
+    rm -f /etc/systemd/system/lanzous.service
+}
+
+[ "$1" == 'uninstall' ] && uninstall || install
