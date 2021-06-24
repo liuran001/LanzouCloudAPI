@@ -1,5 +1,11 @@
 #!/usr/bin/env bash
 
+for rq in curl tar grep sed systemctl; do
+    [ "$(command -v $rq)" ] || {
+        echo "Lack of $rq, quit installation"
+    }
+done
+
 REPO=LanzouCloudAPI
 DOMAIN=pan.lanzou.com
 IP=47.91.203.9
