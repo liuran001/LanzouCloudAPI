@@ -47,7 +47,7 @@ def find_first(pattern, text):
         return match[0]
 
 
-def get_params(fid, client: Client, pwd=None):
+def get_params(fid: str, client: Client, pwd=None):
     if client == Client.PC:
         text = get(f'{ORIGIN}/{fid}', client).text
         if pwd:
@@ -66,14 +66,11 @@ def get_params(fid, client: Client, pwd=None):
             data = eval(find_first(r"[^/]{2,}data : ({.+})", text))
             params = urlencode(data, quote_via=quote_plus)
     else:
-        def get_text(fid):
-            return get(f'{ORIGIN}/tp/{fid}', client).text
-
-        text = get_text(fid)
-        if not text:
+        if not fid.startswith('i'):
             text = get(f'{ORIGIN}/{fid}', client).text
             fid = find_first(r"[^/]{2,}.+ = 'tp/(.+)'", text)
-            text = get_text(fid)
+
+        text = get(f'{ORIGIN}/tp/{fid}', client).text
 
         if pwd:
             params = eval(find_first(r"[^/]{2,}data : ({.+})", text))
@@ -189,6 +186,8 @@ if __name__ == '__main__':
     test('i4wk2oh',  Client.PC)
     test('iRujgdfrkza', Client.MOBILE)
     test('iRujgdfrkza', Client.PC)
+    test('feifei1', Client.MOBILE, 'aam1')
+    test('feifei1', Client.PC, 'aam1')
     test('dkbdv7', Client.MOBILE)
     test('dkbdv7', Client.PC)
     print('--------------------------------------')
