@@ -53,6 +53,9 @@ Date: Fri, 02 Apr 2021 21:17:25 GMT
 ```bash
 # install python3.6+ manually before executing the following command
 bash <(curl -sL https://github.com/vcheckzen/LanzouCloudAPI/raw/master/setup.sh)
+
+# uninstall
+bash <(curl -sL https://github.com/vcheckzen/LanzouCloudAPI/raw/master/setup.sh) uninstall
 ```
 
 ### Set up Reverse Proxy

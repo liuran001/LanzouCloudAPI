@@ -48,7 +48,7 @@ uninstall() {
 
     rm -rf "$SAVE_PATH/$REPO"
 
-    sed -i "s/.*$DOMAIN//" /etc/hosts
+    sed -i "/.*$DOMAIN/d" /etc/hosts
 
     systemctl disable --now lanzous
     rm -f /etc/systemd/system/lanzous.service
