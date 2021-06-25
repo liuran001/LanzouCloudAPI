@@ -1,16 +1,14 @@
 import re
 import os
+import sys
 from enum import Enum
 from urllib.parse import urlencode, quote_plus, unquote
 
 import requests
 from flask import Flask, request, redirect, jsonify, abort, make_response
+from waitress import serve
 
 app = Flask(__name__)
-app.config['JSON_AS_ASCII'] = False
-app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
-
-port = int(os.getenv('PORT', '3000'))
 ORIGIN = 'http://pan.lanzou.com'
 
 
@@ -175,23 +173,30 @@ def cors(response):
     return response
 
 
-def test(fid, client: Client, pwd=None):
-    print('--------------------------------------')
-    print(f'fid={fid}, client={client}, pwd={pwd}')
-    print(get_url(fid, client, pwd))
+def test():
+    def request(fid, client: Client, pwd=None):
+        print(f'fid={fid}, client={client}, pwd={pwd}')
+        print(get_url(fid, client, pwd))
+        print('--------------------------------------')
+
+    request('i7tit9c', Client.MOBILE, '6svq')
+    request('i7tit9c', Client.PC, '6svq')
+    request('i4wk2oh', Client.MOBILE)
+    request('i4wk2oh',  Client.PC)
+    request('iRujgdfrkza', Client.MOBILE)
+    request('iRujgdfrkza', Client.PC)
+    request('feifei1', Client.MOBILE, 'aam1')
+    request('feifei1', Client.PC, 'aam1')
+    request('dkbdv7', Client.MOBILE)
+    request('dkbdv7', Client.PC)
 
 
 if __name__ == '__main__':
-    test('i7tit9c', Client.MOBILE, '6svq')
-    test('i7tit9c', Client.PC, '6svq')
-    test('i4wk2oh', Client.MOBILE)
-    test('i4wk2oh',  Client.PC)
-    test('iRujgdfrkza', Client.MOBILE)
-    test('iRujgdfrkza', Client.PC)
-    test('feifei1', Client.MOBILE, 'aam1')
-    test('feifei1', Client.PC, 'aam1')
-    test('dkbdv7', Client.MOBILE)
-    test('dkbdv7', Client.PC)
-    print('--------------------------------------')
-
-    app.run(host='127.0.0.1', port=port)
+    port = int(os.getenv('PORT', '3000'))
+    if len(sys.argv) > 1 and sys.argv[1] == 'production':
+        serve(app, host='127.0.0.1', port=port)
+    else:
+        test()
+        app.config['JSON_AS_ASCII'] = False
+        app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
+        app.run(host='127.0.0.1', port=port)
