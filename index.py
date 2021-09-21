@@ -119,7 +119,7 @@ def gen_json_response(code, msg, extra={}):
 
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
-def catch_all(_):
+def catch_all(path):
     if not re.match('.+\?.*url=.*lanzou.*\.com%2F[\w]{4,}.*', request.url):
         return gen_json_response(
             -1,
