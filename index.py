@@ -6,7 +6,7 @@ from urllib.parse import urlencode, quote_plus, unquote
 
 import requests
 from flask import Flask, request, redirect, jsonify, abort, make_response
-from waitress import serve
+# from waitress import serve
 
 app = Flask(__name__)
 ORIGIN = 'http://pan.lanzou.com'
@@ -63,6 +63,7 @@ def get_params(fid: str, client: Client, pwd=None):
 
             data = eval(find_first(r"[^/]{2,}data : ({.+})", text))
             params = urlencode(data, quote_via=quote_plus)
+
     else:
         if not fid.startswith('i'):
             text = get(f'{ORIGIN}/{fid}', client).text
@@ -118,7 +119,7 @@ def gen_json_response(code, msg, extra={}):
 
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
-def catch_all(path):
+def catch_all(_):
     if not re.match('.+\?.*url=.*lanzou.*\.com%2F[\w]{4,}.*', request.url):
         return gen_json_response(
             -1,
@@ -185,18 +186,19 @@ def test():
     request('i4wk2oh',  Client.PC)
     request('iRujgdfrkza', Client.MOBILE)
     request('iRujgdfrkza', Client.PC)
-    request('feifei1', Client.MOBILE, 'aam1')
-    request('feifei1', Client.PC, 'aam1')
+    # request('feifei1', Client.MOBILE, 'aam1')
+    # request('feifei1', Client.PC, 'aam1')
     request('dkbdv7', Client.MOBILE)
     request('dkbdv7', Client.PC)
 
 
 if __name__ == '__main__':
     port = int(os.getenv('PORT', '3000'))
-    if len(sys.argv) > 1 and sys.argv[1] == 'production':
-        serve(app, host='127.0.0.1', port=port)
-    else:
+    if len(sys.argv) <= 1 or sys.argv[1] != 'production':
         test()
         app.config['JSON_AS_ASCII'] = False
         app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
-        app.run(host='127.0.0.1', port=port)
+    # else:
+        # serve(app, host='127.0.0.1', port=port)
+
+    app.run(host='127.0.0.1', port=port)
