@@ -9,7 +9,7 @@ from flask import Flask, request, redirect, jsonify, abort, make_response
 # from waitress import serve
 
 app = Flask(__name__)
-ORIGIN = 'http://pan.lanzou.com'
+ORIGIN = 'https://lanzoui.com'
 
 
 class Client(Enum):
@@ -70,7 +70,6 @@ def get_params(fid: str, client: Client, pwd=None):
             fid = find_first(r"[^/]{2,}.+ = 'tp/(.+)'", text)
 
         text = get(f'{ORIGIN}/tp/{fid}', client).text
-
         if pwd:
             params = eval(find_first(r"[^/]{2,}data : ({.+})", text))
         else:

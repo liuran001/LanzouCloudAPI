@@ -7,8 +7,9 @@ for rq in curl tar grep sed systemctl python3; do
     }
 done
 
-IP=47.91.203.9
-DOMAIN=pan.lanzou.com
+IP=140.249.61.99
+DOMAIN=lanzoui.com
+OLD_DOMAIN=pan.lanzou.com
 REPO=LanzouCloudAPI
 SAVE_PATH=/usr/local/share
 POETRY_INSTALATION_SCRIPT=https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py
@@ -31,6 +32,7 @@ install() {
     poetry config virtualenvs.in-project true
     poetry install
 
+    sed -i "/.*$OLD_DOMAIN/d" /etc/hosts
     grep "$DOMAIN" /etc/hosts &>/dev/null && {
         sed -i "s/.*$DOMAIN/$IP $DOMAIN/" /etc/hosts
     } || {
