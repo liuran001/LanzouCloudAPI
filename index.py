@@ -140,7 +140,7 @@ def catch_all(path):
     for client in [Client.MOBILE, Client.PC]:
         try:
             url = get_url(fid, client, pwd)
-            if url.find('dev') < 0:
+            if url.startswith('http') < 0:
                 continue
 
             if data_type == 'down':
