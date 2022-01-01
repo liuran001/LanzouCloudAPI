@@ -48,13 +48,13 @@ macro_rules! gen_default_headers {
     ($client_type:expr) => {
        {
            let mut headers = HeaderMap::new();
-            headers.insert(ACCEPT_LANGUAGE, "zh-CN,zh;q=0.9,en;q=0.8".parse().unwrap());
-            headers.insert(REFERER, ORIGIN.parse().unwrap());
-            headers.insert(USER_AGENT, match $client_type {
+           headers.insert(ACCEPT_LANGUAGE, "zh-CN,zh;q=0.9,en;q=0.8".parse().unwrap());
+           headers.insert(REFERER, ORIGIN.parse().unwrap());
+           headers.insert(USER_AGENT, match $client_type {
                 ClientType::PC => USER_AGENTS.0,
                 ClientType::MOBILE => USER_AGENTS.1,
             }.parse().unwrap());
-            headers
+           headers
        }
     };
 }
@@ -158,12 +158,11 @@ async fn parse(mut file: FileMeta, client_type: &ClientType) -> Response<String>
         ClientType::MOBILE => parse_fake_url_from_mobile_page(&mut file).await?,
     };
 
-    let client = reqwest::Client::builder()
+    reqwest::Client::builder()
         .default_headers(gen_default_headers!(client_type))
         .redirect(reqwest::redirect::Policy::custom(|a| a.stop()))
-        .build()?;
-
-    client.head(fake_url)
+        .build()?
+        .head(fake_url)
         .send()
         .await?
         .headers()
@@ -174,6 +173,7 @@ async fn parse(mut file: FileMeta, client_type: &ClientType) -> Response<String>
 #[tokio::main]
 async fn main() -> Response<()> {
     let mut args: Vec<String> = env::args().collect();
+
     if args.len() < 2 {
         println!("Lack of arguments, examples:\n\t{}\n\t{}",
                  "parse https://lanzoui.com/iRujgdfrkza",
@@ -182,8 +182,8 @@ async fn main() -> Response<()> {
     } else if args.len() < 3 {
         args.push("".to_owned());
     }
-
     args[1] = args[1].split("/").collect::<Vec<&str>>().pop().unwrap().to_owned();
+
     let file = FileMeta { id: args[1].to_owned(), pwd: args[2].to_owned() };
     for c in [ClientType::PC, ClientType::MOBILE] {
         let resp = parse(file.clone(), &c).await;
@@ -203,6 +203,7 @@ mod tests {
     #[tokio::test]
     async fn parser_integration_test() -> Response<()> {
         let mut futures = vec![];
+
         [
             ("i7tit9c", "6svq"),
             ("i4wk2oh", ""),
