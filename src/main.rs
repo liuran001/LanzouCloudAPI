@@ -1,10 +1,10 @@
-use std::env;
+use std::{env, fmt};
 use std::error::Error;
-use std::fmt::{Debug};
+use std::fmt::{Debug, Display, Formatter};
 
 use regex::Regex;
+use reqwest::header::{ACCEPT_LANGUAGE, CONTENT_TYPE, HeaderMap, HeaderValue, LOCATION, REFERER, USER_AGENT};
 use serde::Deserialize;
-use reqwest::header::{CONTENT_TYPE, HeaderMap, HeaderValue};
 
 const ORIGIN: &str = "https://lanzoux.com";
 
@@ -30,32 +30,31 @@ struct FakeResponse {
     url: String,
 }
 
-type Response = Result<String, Box<dyn Error>>;
+#[derive(Debug)]
+struct RegexExtractError(String);
 
-macro_rules! gen_headers {
+impl Display for RegexExtractError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+impl Error for RegexExtractError {}
+
+type Response<T> = Result<T, Box<dyn Error>>;
+
+macro_rules! gen_default_headers {
     ($client_type:expr) => {
        {
            let mut headers = HeaderMap::new();
-            headers.insert(reqwest::header::ACCEPT_LANGUAGE, "zh-CN,zh;q=0.9,en;q=0.8".parse().unwrap());
-            headers.insert(reqwest::header::REFERER, ORIGIN.parse().unwrap());
-            headers.insert(reqwest::header::USER_AGENT, match $client_type {
+            headers.insert(ACCEPT_LANGUAGE, "zh-CN,zh;q=0.9,en;q=0.8".parse().unwrap());
+            headers.insert(REFERER, ORIGIN.parse().unwrap());
+            headers.insert(USER_AGENT, match $client_type {
                 ClientType::PC => USER_AGENTS.0,
                 ClientType::MOBILE => USER_AGENTS.1,
             }.parse().unwrap());
             headers
        }
-    };
-}
-
-macro_rules! find_first_match {
-    ($text:expr, $pattern:expr) => {
-        Regex::new($pattern).unwrap().captures($text).unwrap()[1].to_owned()
-    };
-}
-
-macro_rules! trim_quote {
-    ($str:expr) => {
-        $str.trim_matches(&['\'', '\''] as &[_]).parse().unwrap()
     };
 }
 
@@ -69,37 +68,43 @@ macro_rules! get_text {
     };
 }
 
-macro_rules! parse_params {
-    ($text:expr) => {
-        {
-            let data = find_first_match!($text.as_str(), r"[^/]{2,}data : \{(.+)}");
-            let pairs = data.split(",").map(|pair| {
-                let mut split = pair.split(":")
-                    .map(|str| str.trim().to_owned())
-                    .collect::<Vec<String>>();
-
-                if split[1].starts_with("'") {
-                    split[1] = trim_quote!(split[1]);
-                } else if split[1].parse::<i32>().is_err() {
-                    split[1] = find_first_match!($text.as_str(),
-                        format!(r"[^/].*var {}[ ]*=[ ]*'(.+)'", split[1]).as_str());
-                };
-                split[0] = trim_quote!(split[0]);
-
-                (split[0].to_owned(), split[1].to_owned())
-            }).collect::<Vec<(String, String)>>();
-
-            let mut serializer = url::form_urlencoded::Serializer::new(String::new());
-            for pair in pairs {
-                serializer.append_pair(pair.0.as_str(), pair.1.as_str());
-            }
-
-            serializer.finish()
-        }
-    };
+fn extract_unique_capture<'a>(text: &'a str, pattern: &str) -> Response<&'a str> {
+    Ok(Regex::new(pattern)?
+        .captures(text)
+        .ok_or(RegexExtractError(format!("`{}` and `{}` don't match", text, pattern)))?
+        .get(1)
+        .ok_or(RegexExtractError(format!("`no capture of `{}` in `{}`", pattern, text)))?
+        .as_str())
 }
 
-async fn get_fake_url(params: String, client: reqwest::Client) -> Response {
+fn parse_params(text: &str) -> Response<String> {
+    let mut pairs: Vec<(&str, &str)> = vec![];
+
+    for pair in
+    extract_unique_capture(text, r"[^/]{2,}?data *?: *?\{(.+?)}")?.split(",")
+    {
+        let mut split = pair.split(":")
+            .map(|str| str.trim())
+            .collect::<Vec<&str>>();
+
+        if split[1].starts_with("'") {
+            split[1] = split[1].trim_matches('\'')
+        } else if split[1].parse::<i32>().is_err() {
+            split[1] = extract_unique_capture(text, format!(r"[^/].*?var {} ??= ??'(.+?)'", split[1]).as_str())?;
+        }
+
+        pairs.push((split[0].trim_matches('\''), split[1]))
+    };
+
+    let mut serializer = url::form_urlencoded::Serializer::new(String::new());
+    for pair in pairs {
+        serializer.append_pair(pair.0, pair.1);
+    }
+
+    Ok(serializer.finish())
+}
+
+async fn get_fake_url(params: String, client: reqwest::Client) -> Response<String> {
     let resp = client.post(format!("{}/ajaxm.php", ORIGIN))
         .header(CONTENT_TYPE, HeaderValue::from_static("application/x-www-form-urlencoded"))
         .body(params)
@@ -111,69 +116,68 @@ async fn get_fake_url(params: String, client: reqwest::Client) -> Response {
     Ok(format!("{}/file/{}", resp.dom, resp.url))
 }
 
-
-async fn parse_fake_url_from_pc_page(file: FileMeta) -> Response {
+async fn parse_fake_url_from_pc_page(file: &FileMeta) -> Response<String> {
     let client = reqwest::Client::builder()
-        .default_headers(gen_headers!(ClientType::PC))
+        .default_headers(gen_default_headers!(ClientType::PC))
         .build()?;
 
-    let text = get_text!(client,format!("{}/{}", ORIGIN, file.id));
+    let text = get_text!(client, format!("{}/{}", ORIGIN, file.id));
     let params = if !file.pwd.is_empty() {
-        format!("{}{}", find_first_match!(text.as_str(), r"[^/]{2,}data : '(.+)'\+pwd"), file.pwd)
+        format!("{}{}", extract_unique_capture(text.as_str(), r"[^/]{2,}?.*?data ??: ??'(.+?)'\+pwd")?, file.pwd)
     } else {
-        let url = format!("{}{}", ORIGIN, find_first_match!(text.as_str(), r#"src="(.{20,})" frameborder"#));
+        let url = format!("{}{}", ORIGIN, extract_unique_capture(text.as_str(), r#"src="(.{20,}?)" frameborder"#)?);
         let text = get_text!(client, url);
-        parse_params!(text)
+        parse_params(text.as_str())?
     };
 
     get_fake_url(params, client).await
 }
 
-async fn parse_fake_url_from_mobile_page(file: FileMeta) -> Response {
+async fn parse_fake_url_from_mobile_page(file: &mut FileMeta) -> Response<String> {
     let client = reqwest::Client::builder()
-        .default_headers(gen_headers!(ClientType::MOBILE))
+        .default_headers(gen_default_headers!(ClientType::MOBILE))
         .build()?;
 
-    let mut id = file.id.to_owned();
     if !file.id.starts_with("i") {
         let text = get_text!(client, format!("{}/{}", ORIGIN, file.id));
-        id = find_first_match!(text.as_str(), r"[^/]{2,}.+ = 'tp/(.+)'");
+        file.id = extract_unique_capture(text.as_str(), r"[^/]{2,}?.+?= ??'tp/(.+?)'")?.to_owned();
     }
 
-    let mut text = get_text!(client, format!("{}/tp/{}", ORIGIN, id));
+    let mut text = get_text!(client, format!("{}/tp/{}", ORIGIN, file.id));
     if file.pwd.is_empty() {
-        let path: String = find_first_match!(text.as_str(), r"[^/]{2,}.+'(http[\w\-/:.]{10,})'");
-        let params: String = find_first_match!(text.as_str(), r"[^/]{2,}.+'(\?[\w/+=]{20,})'");
+        let path = extract_unique_capture(text.as_str(), r"[^/]{2,}?.+?'(http[\w\-/:.]{10,}?)'")?;
+        let params = extract_unique_capture(text.as_str(), r"[^/]{2,}?.+?'(\?[\w/+=]{20,}?)'")?;
         Ok(format!("{}{}", path, params))
     } else {
         text = format!("{};var pwd='{}'", text, file.pwd);
-        get_fake_url(parse_params!(text), client).await
+        get_fake_url(parse_params(text.as_str())?, client).await
     }
 }
 
-async fn parse(file: FileMeta, client_type: ClientType) -> Response {
+async fn parse(mut file: FileMeta, client_type: &ClientType) -> Response<String> {
     let fake_url = match client_type {
-        ClientType::PC => parse_fake_url_from_pc_page(file).await?,
-        ClientType::MOBILE => parse_fake_url_from_mobile_page(file).await?,
+        ClientType::PC => parse_fake_url_from_pc_page(&file).await?,
+        ClientType::MOBILE => parse_fake_url_from_mobile_page(&mut file).await?,
     };
 
     let client = reqwest::Client::builder()
-        .default_headers(gen_headers!(client_type))
+        .default_headers(gen_default_headers!(client_type))
         .redirect(reqwest::redirect::Policy::custom(|a| a.stop()))
         .build()?;
 
-    Ok(client.head(fake_url)
+    client.head(fake_url)
         .send()
         .await?
         .headers()
-        .get(reqwest::header::LOCATION).unwrap().to_str()?.to_owned())
+        .get(LOCATION).ok_or("no location header".into())
+        .map(|h| h.to_str().unwrap().to_owned())
 }
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> Response<()> {
     let mut args: Vec<String> = env::args().collect();
     if args.len() < 2 {
-        print!("Lack of arguments, examples:\n\t{}\n\t{}",
+        println!("Lack of arguments, examples:\n\t{}\n\t{}",
                  "parse https://lanzoui.com/iRujgdfrkza",
                  "parse https://lanzoui.com/i7tit9c 6svq");
         return Ok(());
@@ -183,15 +187,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     args[1] = args[1].split("/").collect::<Vec<&str>>().pop().unwrap().to_owned();
     let file = FileMeta { id: args[1].to_owned(), pwd: args[2].to_owned() };
-    for c in [ClientType::MOBILE, ClientType::PC] {
-        let resp = parse(file.clone(), c).await;
+    for c in [ClientType::PC, ClientType::MOBILE] {
+        let resp = parse(file.clone(), &c).await;
         if resp.is_ok() {
-            print!("{}", resp.unwrap());
-            break;
+            println!("{}", resp?);
+            return Ok(());
         }
     }
 
-    Ok(())
+    Err("If the link and pwd are correct, the API may have changed.".into())
 }
 
 #[cfg(test)]
@@ -199,7 +203,7 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    async fn parser_integration_test() {
+    async fn parser_integration_test() -> Response<()> {
         let mut futures = vec![];
         [
             ("i7tit9c", "6svq"),
@@ -208,11 +212,13 @@ mod tests {
             ("dkbdv7", ""),
         ].iter().map(|f| (f.0.to_owned(), f.1.to_owned()))
             .map(|(id, pwd)| FileMeta { id, pwd })
-            .for_each(|f| [ClientType::PC, ClientType::MOBILE].into_iter()
+            .for_each(|f| [ClientType::PC, ClientType::MOBILE].iter()
                 .for_each(|c| futures.push(parse(f.clone(), c))));
 
         for f in futures {
-            assert!(f.await.unwrap().starts_with("https://"));
+            assert!(f.await?.starts_with("https://"));
         }
+
+        Ok(())
     }
 }
