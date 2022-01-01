@@ -82,7 +82,7 @@ fn parse_params(text: &str) -> Response<String> {
     let mut pairs: Vec<(&str, &str)> = vec![];
 
     for pair in
-    extract_unique_capture(text, r"[^/]{2,}?data *?: *?\{(.+?)}")?.split(",")
+    extract_unique_capture(text, r"[^/]{2,}? *?data *?: *?\{(.+?)}")?.split(",")
     {
         let mut split = pair.split(":")
             .map(|str| str.trim())
@@ -121,7 +121,7 @@ async fn parse_fake_url_from_pc_page(file: &FileMeta) -> Response<String> {
 
     let text = get_text!(client, format!("{}/{}", ORIGIN, file.id));
     let params = if !file.pwd.is_empty() {
-        format!("{}{}", extract_unique_capture(text.as_str(), r"[^/]{2,}?.*?data ??: ??'(.+?)'\+pwd")?, file.pwd)
+        format!("{}{}", extract_unique_capture(text.as_str(), r"[^/]{2,}? *?data *?: *?'(.{20,}?)'\+pwd")?, file.pwd)
     } else {
         let url = format!("{}{}", ORIGIN, extract_unique_capture(text.as_str(), r#"src="(.{20,}?)" frameborder"#)?);
         let text = get_text!(client, url);
@@ -138,13 +138,13 @@ async fn parse_fake_url_from_mobile_page(file: &mut FileMeta) -> Response<String
 
     if !file.id.starts_with("i") {
         let text = get_text!(client, format!("{}/{}", ORIGIN, file.id));
-        file.id = extract_unique_capture(text.as_str(), r"[^/]{2,}?.+?= ??'tp/(.+?)'")?.to_owned();
+        file.id = extract_unique_capture(text.as_str(), r"[^/]{2,}? *?var .+? *?= *?'tp/(.+?)'")?.to_owned();
     }
 
     let mut text = get_text!(client, format!("{}/tp/{}", ORIGIN, file.id));
     if file.pwd.is_empty() {
-        let path = extract_unique_capture(text.as_str(), r"[^/]{2,}?.+?'(http[\w\-/:.]{10,}?)'")?;
-        let params = extract_unique_capture(text.as_str(), r"[^/]{2,}?.+?'(\?[\w/+=]{20,}?)'")?;
+        let path = extract_unique_capture(text.as_str(), r"[^/]{2,}? *?var .+? *?= *?'(http[\w\-/:.]{10,}?)'")?;
+        let params = extract_unique_capture(text.as_str(), r"[^/]{2,}? *?var .+? *?= *?'(\?[\w/+=]{20,}?)'")?;
         Ok(format!("{}{}", path, params))
     } else {
         text = format!("{};var pwd='{}'", text, file.pwd);
@@ -213,7 +213,7 @@ mod tests {
             .iter()
             .map(|f| (f.0.to_owned(), f.1.to_owned()))
             .map(|(id, pwd)| FileMeta { id, pwd })
-            .for_each(|f| [ClientType::PC, ClientType::MOBILE]
+            .for_each(|f| [ClientType::MOBILE, ClientType::PC]
                 .iter()
                 .for_each(|c| futures.push(parse(f.clone(), c))));
 
