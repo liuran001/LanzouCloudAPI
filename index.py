@@ -49,32 +49,31 @@ def get_params(fid: str, client: Client, pwd=None):
     if client == Client.PC:
         text = get(f'{ORIGIN}/{fid}', client).text
         if pwd:
-            params = find_first(r"[^/]{2,}data : '(.+)'\+pwd", text) + pwd
+            params = find_first(r"[^/]{2,}? *?data *?: *?'(.{20,}?)'\+pwd", text) + pwd
         else:
-            fn = find_first(r'src="(.{20,})" frameborder', text)
+            fn = find_first(r'src="(.{20,}?)" frameborder', text)
             text = get(f'{ORIGIN}/{fn}',  client).text
 
             try:
-                exec(find_first(
-                    r"[^/]{2,}var (.+ = '\?[\w/_+=]{1,10}')", text))
-                exec(find_first(r"[^/]{2,}var (.+ = '[\w/_+=]{20,}')", text))
+                exec(find_first(r"[^/]{2,}? *?var +?(.+ *?= *?'\?[\w/_+=]{1,10}?')", text))
+                exec(find_first(r"[^/]{2,}? *?var +?(.+ *?= *?'[\w/_+=]{20,}?')", text))
             except Exception:
                 pass
 
-            data = eval(find_first(r"[^/]{2,}data : ({.+})", text))
+            data = eval(find_first(r"[^/]{2,}? *?data *?: *?({.+?})", text))
             params = urlencode(data, quote_via=quote_plus)
 
     else:
         if not fid.startswith('i'):
             text = get(f'{ORIGIN}/{fid}', client).text
-            fid = find_first(r"[^/]{2,}.+ = 'tp/(.+)'", text)
+            fid = find_first(r"[^/]{2,}? *?var .+? *?= *?'tp/(.+?)'", text)
 
         text = get(f'{ORIGIN}/tp/{fid}', client).text
         if pwd:
-            params = eval(find_first(r"[^/]{2,}data : ({.+})", text))
+            params = eval(find_first(r"[^/]{2,}? *?data *?: *?({.+?})", text))
         else:
-            url_pre = find_first(r"[^/]{2,}.+ '(http[\w:/\-\.]{10,})'", text)
-            url_suf = find_first(r"[^/]{2,}.+ '(\?[\w/+=]{100,})'", text)
+            url_pre = find_first(r"[^/]{2,}? *?var .+? *?= *?'(http[\w\-/:.]{10,}?)'", text)
+            url_suf = find_first(r"[^/]{2,}? *?var .+? *?= *?'(\?[\w/+=]{20,}?)'", text)
             params = url_pre + url_suf
     return params
 
@@ -137,7 +136,7 @@ def catch_all(path):
     fid = url.split('/')[-1]
 
     errors = []
-    for client in [Client.MOBILE, Client.PC]:
+    for client in [Client.PC, Client.MOBILE]:
         try:
             url = get_url(fid, client, pwd)
             if not url.startswith('http'):
