@@ -1,3 +1,10 @@
+#########################################
+# 蓝奏云直链获取-Python版
+# https://github.com/liuran001/LanzouCloudAPI
+# 修改自 https://github.com/vcheckzen/LanzouCloudAPI
+# 使用 GPL-3.0 协议 开放源代码 https://github.com/liuran001/LanzouCloudAPI/blob/master/LICENSE
+#########################################
+
 import re
 import os
 import sys
@@ -7,6 +14,15 @@ from urllib.parse import urlencode, quote_plus, unquote
 import requests
 from flask import Flask, request, redirect, jsonify, abort, make_response
 # from waitress import serve
+
+import pymysql
+conn=pymysql.Connect(host="example.com", user="example" ,password="example", database="example", charset="utf8"
+)
+cursor=conn.cursor(cursor=pymysql.cursors.DictCursor)
+sql3="UPDATE `statistics` SET lanzous_ok = lanzous_ok + 1"
+sql4="UPDATE `statistics` SET lanzous = lanzous + 1"
+sql1="UPDATE `statistics` SET lanzous_error1 = lanzous_error1 + 1"
+sql2="UPDATE `statistics` SET lanzous_error2 = lanzous_error2 + 1"
 
 app = Flask(__name__)
 ORIGIN = 'https://lanzoui.com'
@@ -22,8 +38,8 @@ def gen_headers(client: Client):
         'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
         'Referer': ORIGIN,
         'User-Agent': [
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.114 Safari/537.36',
-            'Mozilla/5.0 (Linux; Android 8.0; Pixel 2 Build/OPD3.170816.012) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.114 Mobile Safari/537.36'
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36 Edg/96.0.1054.62',
+            'Mozilla/5.0 (Linux; Android 10; Pixel 2 Build/OPD3.170816.012) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.104 Mobile Safari/537.36'
         ][0 if client == Client.PC else 1]
     }
 
@@ -119,21 +135,29 @@ def gen_json_response(code, msg, extra={}):
 @app.route('/<path:path>')
 def catch_all(path):
     if not re.match('.+\?.*url=.*lanzou.*\.com%2F[\w]{4,}.*', request.url):
-        return gen_json_response(
-            -1,
-            'invalid link',
-            {
-                'examples': [
-                    f'{request.base_url}?url={ORIGIN}/i4wk2oh&type=down',
-                    f'{request.base_url}?url={ORIGIN}/i7tit9c&pwd=6svq&type=json',
-                ]
-            }
-        )
-
-    url = request.args.get('url')
+        if not re.match('.+\?.*url=[\w]{4,}.*', request.url):
+            cursor.execute(sql1)
+            cursor.execute(sql4)
+            conn.commit()
+            return gen_json_response(
+                -1,
+                'invalid link',
+                {
+                    'examples': [
+                        f'{request.base_url}?url=i4wk2oh&type=down',
+                        f'{request.base_url}?url={ORIGIN}/i4wk2oh&type=down',
+                        f'{request.base_url}?url={ORIGIN}/i7tit9c&pwd=6svq&type=json',
+                    ]
+                }
+            )
+        else:
+            fid = request.args.get('url')
+    else:
+        url = request.args.get('url')
+        fid = url.split('/')[-1]
+    
     pwd = request.args.get('pwd')
     data_type = request.args.get('type')
-    fid = url.split('/')[-1]
 
     errors = []
     for client in [Client.PC, Client.MOBILE]:
@@ -145,6 +169,9 @@ def catch_all(path):
             if data_type == 'down':
                 return redirect(url)
             else:
+                cursor.execute(sql3)
+                cursor.execute(sql4)
+                conn.commit()
                 return gen_json_response(
                     200,
                     'success',
@@ -159,6 +186,9 @@ def catch_all(path):
 
 @app.errorhandler(500)
 def server_error(error):
+    cursor.execute(sql2)
+    cursor.execute(sql4)
+    conn.commit()
     return gen_json_response(
         -2,
         'link not match pwd, or lanzous has changed their webpage',
@@ -193,7 +223,7 @@ def test():
 if __name__ == '__main__':
     port = int(os.getenv('PORT', '3000'))
     if len(sys.argv) <= 1 or sys.argv[1] != 'production':
-        test()
+        # test()
         app.config['JSON_AS_ASCII'] = False
         app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
     # else:
