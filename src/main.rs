@@ -5,6 +5,7 @@ use std::fmt::{Debug, Display, Formatter};
 use regex::Regex;
 use reqwest::header::{ACCEPT_LANGUAGE, CONTENT_TYPE, HeaderMap, HeaderValue, LOCATION, REFERER, USER_AGENT};
 use serde::Deserialize;
+use url::form_urlencoded::Serializer;
 
 const ORIGIN: &str = "https://lanzoux.com";
 
@@ -96,12 +97,9 @@ fn parse_params(text: &str) -> Response<String> {
         pairs.push((split[0].trim_matches('\''), split[1]))
     };
 
-    let mut serializer = url::form_urlencoded::Serializer::new(String::new());
-    for pair in pairs {
-        serializer.append_pair(pair.0, pair.1);
-    }
-
-    Ok(serializer.finish())
+    Ok(Serializer::new(String::new())
+        .extend_pairs(pairs)
+        .finish())
 }
 
 async fn get_fake_url(params: String, client: reqwest::Client) -> Response<String> {
