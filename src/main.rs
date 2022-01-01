@@ -208,10 +208,13 @@ mod tests {
             ("i7tit9c", "6svq"),
             ("i4wk2oh", ""),
             ("iRujgdfrkza", ""),
-            ("dkbdv7", ""),
-        ].iter().map(|f| (f.0.to_owned(), f.1.to_owned()))
+            ("dkbdv7", "")
+        ]
+            .iter()
+            .map(|f| (f.0.to_owned(), f.1.to_owned()))
             .map(|(id, pwd)| FileMeta { id, pwd })
-            .for_each(|f| [ClientType::PC, ClientType::MOBILE].iter()
+            .for_each(|f| [ClientType::PC, ClientType::MOBILE]
+                .iter()
                 .for_each(|c| futures.push(parse(f.clone(), c))));
 
         for f in futures {
